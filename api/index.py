@@ -36,7 +36,7 @@ async def analyze_image(file: UploadFile = File(...)):
 
         # 2. Call Groq with the EXACT model string
         response = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview", # Verify this name in Groq docs
+            model="llama-3.2-90b-vision-preview",
             messages=[
                 {
                     "role": "user",
