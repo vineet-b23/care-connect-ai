@@ -14,8 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API Key from Vercel Environment Variables
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+# --- HARDCODED API KEY FOR DEMO ---
+# PASTE YOUR KEY FROM GROQ CONSOLE HERE
+GROQ_API_KEY = "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" 
 client = Groq(api_key=GROQ_API_KEY)
 
 @app.get("/")
@@ -25,18 +26,18 @@ def health_check():
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
     try:
-        # 1. Read file and check size (Vercel limit is 4.5MB)
+        # 1. Read file and check size (Vercel limit 4.5MB)
         contents = await file.read()
         file_size = len(contents) / (1024 * 1024) 
         
         if file_size > 4.3:
-            return {"analysis": "⚠️ Error: Image too large. Please take a lower resolution photo or crop it."}
+            return {"analysis": "⚠️ Error: Image too large. Please take a lower resolution photo."}
 
         # 2. Detect Content Type 
         content_type = file.content_type if file.content_type else "image/jpeg"
         
         # 3. Secure Base64 Encoding with Whitespace Stripping
-        # This prevents the 400 'Bad Request' error caused by hidden characters
+        # This is the fix for the 400 'Bad Request' error
         base_string = base64.b64encode(contents).decode('utf-8')
         clean_base64 = "".join(base_string.split()) 
         
@@ -63,13 +64,14 @@ async def analyze_image(file: UploadFile = File(...)):
                 }
             ],
             max_tokens=800,
-            temperature=0.1, # Extremely low temperature for high accuracy
+            temperature=0.1, 
         )
         
         # 5. Extract the AI text
         analysis = response.choices[0].message.content
 
         # --- THE DEMO INSURANCE (Safe-Fail) ---
+        # If AI returns nothing, show this professional fallback
         if not analysis or len(analysis.strip()) < 10:
             return {
                 "analysis": "💊 **Prescription Analysis Result:**\n\n"
@@ -82,6 +84,5 @@ async def analyze_image(file: UploadFile = File(...)):
         return {"analysis": analysis}
 
     except Exception as e:
-        # If things go wrong, this returns a readable error rather than crashing the app
-        print(f"CRITICAL ERROR: {str(e)}")
-        return {"analysis": f"⚠️ AI Service is currently updating. (Ref: {str(e)[:30]})"}
+        # If the API key is invalid or Groq is down, this returns the error to Flutter
+        return {"analysis": f"⚠️ AI Error: {str(e)[:50]}... Please try again."}
